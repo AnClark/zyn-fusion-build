@@ -1,0 +1,17 @@
+diff --git a/build_config.rb b/build_config.rb
+index 32c6293..b116a43 100644
+--- a/build_config.rb
++++ b/build_config.rb
+@@ -168,6 +170,7 @@ build_type.new(build_name) do |conf|
+   #conf.gem 'deps/mruby-profiler'
+ end
+ 
++if(false)
+ MRuby::Build.new('host-debug') do |conf|
+   # load specific toolchain settings
+   toolchain :gcc
+@@ -200,3 +203,4 @@ MRuby::Build.new('host-debug') do |conf|
+     conf.gem :core => "mruby-bin-debugger"
+   end
+ end
++end

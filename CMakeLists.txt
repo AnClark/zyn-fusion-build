@@ -10,7 +10,7 @@ set (CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/z/mingw64-build.cmake" CACHE FILE
 
 
 project(zyn-fusion
-  VERSION 3.0.7
+  VERSION 3.0.6
   DESCRIPTION "Open source synthesizer"
   LANGUAGES C CXX)
 
@@ -43,10 +43,16 @@ set (DEPS_PREFIX_PATH "${CMAKE_CURRENT_BINARY_DIR}/usr/")
 set (DOWNLOAD_PATH "${CMAKE_SOURCE_DIR}/download")
 set (PATCH_PATH "${CMAKE_SOURCE_DIR}/patch")
 
-set (ZYNADDSUBFX_BUILD_PATH "${CMAKE_CURRENT_BINARY_DIR}/zynaddsubfx-build")
+set (ZYNADDSUBFX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/zynaddsubfx-build")
+set (ZYNADDSUBFX_PATH ${DEPS_PATH}/zynaddsubfx)
+set (ZEST_PATH ${DEPS_PATH}/zest)
 
 set (CMAKE_ARGS_DEPS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DINSTALL_LIB_DIR=${DEPS_PREFIX_PATH}/lib -DINSTALL_INC_DIR=${DEPS_PREFIX_PATH}/include -DINSTALL_BIN_DIR=${DEPS_PREFIX_PATH}/bin -DINSTALL_MAN_DIR=${DEPS_PREFIX_PATH}/share/man -DINSTALL_PKGCONFIG_DIR=${DEPS_PREFIX_PATH}/share/pkgconfig)
 
+
+#
+# Build dependencies
+#
 
 # Build FFTW3
 ExternalProject_Add (
@@ -112,7 +118,7 @@ ExternalProject_Add (
     # Note for configurations:
     # - Consider static library first
     # - Disable WDM Kernel Streaming (already deprecated by Microsoft, will cause error)
-    CMAKE_ARGS -DPA_BUILD_SHARED=0 -DPA_BUILD_STATIC=1 -DPA_USE_WDMKS=0 ${CMAKE_ARGS_DEPS}
+    CMAKE_ARGS -DPA_BUILD_SHARED=1 -DPA_BUILD_STATIC=1 -DPA_USE_WDMKS=0 ${CMAKE_ARGS_DEPS}
 )
 
 # Build zlib
@@ -131,13 +137,18 @@ ExternalProject_Add (
     BUILD_COMMAND make ${MAKE_MULTIJOB}
 )
 
+
+#
+# Build Zyn-Fusion
+#
+
 # Build ZynAddSubFX
 ExternalProject_Add (
     zynaddsubfx
     DEPENDS fftw3 zlib mxml portaudio liblo
     DOWNLOAD_DIR ${DOWNLOAD_PATH}
-    SOURCE_DIR ${DEPS_PATH}/zynaddsubfx
-    BINARY_DIR ${ZYNADDSUBFX_BUILD_PATH}
+    SOURCE_DIR ${ZYNADDSUBFX_PATH}
+    BINARY_DIR ${ZYNADDSUBFX_BUILD_DIR}
 
     GIT_REPOSITORY "https://github.com/zynaddsubfx/zynaddsubfx" GIT_SHALLOW
     UPDATE_DISCONNECTED true  # need this to avoid constant rebuild
@@ -153,14 +164,16 @@ ExternalProject_Add (
 ExternalProject_Add (
     zest
     DOWNLOAD_DIR ${DOWNLOAD_PATH}
-    SOURCE_DIR ${DEPS_PATH}/zest
+    SOURCE_DIR ${ZEST_PATH}
 
     GIT_REPOSITORY "https://github.com/mruby-zest/mruby-zest-build" GIT_SHALLOW
     UPDATE_DISCONNECTED true  # need this to avoid constant rebuild
 
     BUILD_IN_SOURCE ON
+    CONFIGURE_HANDLED_BY_BUILD ON
     CONFIGURE_COMMAND ""
     BUILD_COMMAND make CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} AR=${CMAKE_AR} LD=${CMAKE_LD} CCLD=${CMAKE_LD} VERSION=${PACKAGE_VERSION} BUILD_MODE=${BUILD_MODE} windows
+    #BUILD_COMMAND make help
     INSTALL_COMMAND ""      # No need to install. We'll copy files manually.
 )
 
@@ -170,7 +183,7 @@ ExternalProject_Add_Step (
     DEPENDERS build
     COMMAND rm -f package/qml/*.qml
     COMMAND ruby rebuild-fcache.rb
-    WORKING_DIRECTORY ${DEPS_PATH}/zest
+    WORKING_DIRECTORY ${ZEST_PATH}
     ALWAYS ON
 )
 
@@ -178,9 +191,79 @@ ExternalProject_Add_Step (
     zest
     mruby_superhack_patch
     DEPENDERS build
-    DEPENDEES rebuild_fcache
-    COMMAND git checkout -- . 
+    COMMAND git checkout -- src/backtrace.c
     COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-string-backtraces.patch
-    WORKING_DIRECTORY ${DEPS_PATH}/zest/mruby
+    WORKING_DIRECTORY ${ZEST_PATH}/mruby
     ALWAYS ON
 )
+
+ExternalProject_Add_Step (
+    zest
+    zest_bypass_host_debug
+    DEPENDERS build
+    COMMAND git checkout -- build_config.rb
+    COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-bypass-host-debug.patch
+    WORKING_DIRECTORY ${ZEST_PATH}
+    ALWAYS ON
+)
+
+
+#
+# Install files
+#
+
+# Zyn-Fusion binaries
+install (
+    PROGRAMS ${ZEST_PATH}/zest.exe
+    RENAME zyn-fusion.exe
+    DESTINATION ${ZYN_FUSION_OUT}
+)
+install (
+    PROGRAMS ${ZYNADDSUBFX_BUILD_DIR}/src/zynaddsubfx.exe
+    DESTINATION ${ZYN_FUSION_OUT}
+)
+install (
+    FILES 
+    ${ZEST_PATH}/libzest.dll
+    ${ZYNADDSUBFX_BUILD_DIR}/src/Plugin/ZynAddSubFX/ZynAddSubFX.dll
+    DESTINATION ${ZYN_FUSION_OUT}
+)
+
+# Fonts
+install (
+    FILES
+    ${ZEST_PATH}/deps/nanovg/example/entypo.ttf
+    ${ZEST_PATH}/deps/nanovg/example/Roboto-Bold.ttf
+    ${ZEST_PATH}/deps/nanovg/example/Roboto-Light.ttf
+    ${ZEST_PATH}/deps/nanovg/example/Roboto-Regular.ttf
+    DESTINATION ${ZYN_FUSION_OUT}/font/
+)
+
+# OSC schema
+install (
+    FILES ${ZEST_PATH}/src/osc-bridge/schema/test.json
+    DESTINATION ${ZYN_FUSION_OUT}/schema/
+)
+
+# External dependencies
+find_file (
+    PTHREAD_LIBRARY
+    NAMES libwinpthread-1.dll libwinpthread.dll
+    HINTS $ENV{PATH}
+)
+install (
+    FILES 
+    ${DEPS_PREFIX_PATH}/bin/libportaudio.dll
+    ${PTHREAD_LIBRARY}
+    DESTINATION ${ZYN_FUSION_OUT}
+)
+
+# Presets
+install (
+    DIRECTORY ${ZYNADDSUBFX_PATH}/instruments/banks
+    DESTINATION ${ZYN_FUSION_OUT}
+)
+
+# Zest MainWindow entrance. Actually it's an empty file.
+file(MAKE_DIRECTORY ${ZYN_FUSION_OUT}/qml)
+file(TOUCH ${ZYN_FUSION_OUT}/qml/MainWindow.qml)
