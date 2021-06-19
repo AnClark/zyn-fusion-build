@@ -67,6 +67,14 @@ else ()
     set (EXCLUDE_OR_NOT ON)
 endif ()
 
+if (WIN32 OR CROSS_WINDOWS)
+    set (HOST_ARG --host=x86_64-w64-mingw32)
+endif ()
+
+if (WIN32 AND NOT CROSS_WINDOWS)  # fftw3 cannot guess build system type for Msys2. Here's polyfill
+    set (BUILD_ARG --build=x86_64-w64-mingw32)
+endif ()
+
 # Build FFTW3
 ExternalProject_Add (
     fftw3
@@ -77,7 +85,7 @@ ExternalProject_Add (
     URL_MD5 2edab8c06b24feeb3b82bbb3ebf3e7b3
     UPDATE_DISCONNECTED true  # need this to avoid constant rebuild
 
-    CONFIGURE_COMMAND ${DEPS_PATH}/fftw3/configure --build=x86_64-w64-mingw32 --prefix=${DEPS_PREFIX_PATH} --with-our-malloc --disable-mpi
+    CONFIGURE_COMMAND ${DEPS_PATH}/fftw3/configure ${BUILD_ARG} ${HOST_ARG} --prefix=${DEPS_PREFIX_PATH} --with-our-malloc --disable-mpi
     BUILD_COMMAND make ${MAKE_MULTIJOB}
     INSTALL_COMMAND make ${MAKE_MULTIJOB} install
 
@@ -96,7 +104,7 @@ ExternalProject_Add (
     UPDATE_DISCONNECTED true  # need this to avoid constant rebuild
 
     BUILD_IN_SOURCE ON        # Autotools is not smart enough for using external configure path
-    CONFIGURE_COMMAND ${DEPS_PATH}/liblo/autogen.sh --build=x86_64-w64-mingw32 --prefix=${DEPS_PREFIX_PATH} --disable-shared --enable-static --disable-tests --disable-network-tests --disable-examples
+    CONFIGURE_COMMAND ${DEPS_PATH}/liblo/autogen.sh ${HOST_ARG} --prefix=${DEPS_PREFIX_PATH} --disable-shared --enable-static --disable-tests --disable-network-tests --disable-examples
     BUILD_COMMAND make ${MAKE_MULTIJOB}
     INSTALL_COMMAND make ${MAKE_MULTIJOB} install
 
@@ -115,7 +123,7 @@ ExternalProject_Add (
     UPDATE_DISCONNECTED true  # need this to avoid constant rebuild
 
     BUILD_IN_SOURCE ON        # Autotools is not smart enough for using external configure path
-    CONFIGURE_COMMAND ${DEPS_PATH}/mxml/configure --build=x86_64-w64-mingw32 --prefix=${DEPS_PREFIX_PATH} --disable-shared --enable-static
+    CONFIGURE_COMMAND ${DEPS_PATH}/mxml/configure ${HOST_ARG} --prefix=${DEPS_PREFIX_PATH} --disable-shared --enable-static
     BUILD_COMMAND make ${MAKE_MULTIJOB} libmxml.a
     INSTALL_COMMAND make ${MAKE_MULTIJOB} -i install
 
