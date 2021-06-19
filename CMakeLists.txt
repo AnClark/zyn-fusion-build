@@ -36,6 +36,16 @@ option (PARALLEL_BUILD_DEPS "Enable parallel build on dependencies.
         Trade-off is that you cannot use `-jn` when invoking `make` in build path.
         DO NOT USE IT WITH NINJA!" ON)
 
+option (PARALLEL_BUILD_ZYNADDSUBFX "Enable parallel build on ZynAddSubFX.
+        Trade-off is that you may not compile Zest at the same time via `make -jn`,
+        and your terminal output may mess up.
+        DO NOT USE IT WITH NINJA!" OFF)
+
+option (PARALLEL_BUILD_ZEST "Enable parallel build on Zest (EXPERIMENTAL).
+        Trade-off is that you may not compile ZynAddSubFX and other dependencies
+        at the same time via `make -jn`.
+        DO NOT USE IT WITH NINJA!" OFF)
+
 if (DEMO_MODE)
     set (BUILD_MODE demo)
 else ()
@@ -44,6 +54,12 @@ endif ()
 
 if (PARALLEL_BUILD_DEPS)
     set (MAKE_MULTIJOB -j${Ncpu})
+endif ()
+
+if (PARALLEL_BUILD_ZYNADDSUBFX)
+    set (MAKE_MULTIJOB_ZYNADDSUBFX -j${Ncpu})
+else ()
+    set (MAKE_MULTIJOB_ZYNADDSUBFX -j2)     # Conservative multijob
 endif ()
 
 
@@ -197,7 +213,7 @@ ExternalProject_Add (
     # Some arguments are not cross-platform
     # - Msys2 only: OssEnable, DefaultOutput
     CMAKE_ARGS -DPREFIX_PATH=${DEPS_PREFIX_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PREFIX_PATH} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DOssEnable=False -DGuiModule=zest -DDefaultOutput=pa -DDemoMode=${DEMO_MODE} 
-    BUILD_COMMAND make -j2
+    BUILD_COMMAND make ${MAKE_MULTIJOB_ZYNADDSUBFX}
     INSTALL_COMMAND ""      # No need to install. We'll copy files manually.
 )
 
@@ -253,6 +269,19 @@ ExternalProject_Add_Step (
     ALWAYS ON
 )
 
+if (PARALLEL_BUILD_ZEST)
+    ExternalProject_Add_Step (
+        zest
+        zest_parallel_build_patch
+        DEPENDERS build
+        DEPENDEES download
+        COMMAND git checkout -- Makefile
+        COMMAND sed s/rake/rake\ \-j${Ncpu}/ -i Makefile
+        COMMAND sed s/make/make\ \-j${Ncpu}/ -i Makefile
+        WORKING_DIRECTORY ${ZEST_PATH}
+        ALWAYS ON
+    )
+endif ()
 
 #
 # Install files
