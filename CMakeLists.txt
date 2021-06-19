@@ -209,6 +209,7 @@ ExternalProject_Add_Step (
     zest
     rebuild_fcache
     DEPENDERS build
+    DEPENDEES download
     COMMAND rm -f package/qml/*.qml
     COMMAND ruby rebuild-fcache.rb
     WORKING_DIRECTORY ${ZEST_PATH}
@@ -220,6 +221,7 @@ if (WIN32 OR CROSS_WINDOWS)
         zest
         mruby_superhack_patch
         DEPENDERS build
+        DEPENDEES download
         COMMAND git checkout -- src/backtrace.c
         COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-string-backtraces.patch
         WORKING_DIRECTORY ${ZEST_PATH}/mruby
@@ -231,6 +233,7 @@ ExternalProject_Add_Step (
     zest
     zest_bypass_host_debug
     DEPENDERS build
+    DEPENDEES download
     COMMAND git checkout -- build_config.rb
     COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-bypass-host-debug.patch
     WORKING_DIRECTORY ${ZEST_PATH}
