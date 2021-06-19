@@ -73,8 +73,6 @@ set (ZYNADDSUBFX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/zynaddsubfx-build")
 set (ZYNADDSUBFX_PATH ${DEPS_PATH}/zynaddsubfx)
 set (ZEST_PATH ${DEPS_PATH}/zest)
 
-set (ZLIB_CMAKE_ARGS_DEPS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DINSTALL_LIB_DIR=${DEPS_PREFIX_PATH}/lib -DINSTALL_INC_DIR=${DEPS_PREFIX_PATH}/include -DINSTALL_BIN_DIR=${DEPS_PREFIX_PATH}/bin -DINSTALL_MAN_DIR=${DEPS_PREFIX_PATH}/share/man -DINSTALL_PKGCONFIG_DIR=${DEPS_PREFIX_PATH}/share/pkgconfig)
-
 
 #
 # Build dependencies
@@ -182,8 +180,8 @@ ExternalProject_Add (
     #GIT_REPOSITORY "https://github.com/PortAudio/portaudio" GIT_SHALLOW
     UPDATE_DISCONNECTED true  # need this to avoid constant rebuild
 
-    # Must override install pathes. They won't be configured by ExternalProject.
-    CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} ${ZLIB_CMAKE_ARGS_DEPS}
+    BUILD_IN_SOURCE ON        # Autotools is not smart enough for using external configure path
+    CONFIGURE_COMMAND CC=${CMAKE_C_COMPILER} ${DEPS_PATH}/zlib//configure --prefix=${DEPS_PREFIX_PATH} --static
     BUILD_COMMAND make ${MAKE_MULTIJOB}
 
     EXCLUDE_FROM_ALL ${EXCLUDE_OR_NOT}
