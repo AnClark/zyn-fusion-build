@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
 include(ExternalProject)
 
+option (CROSS_WINDOWS "Enable cross-build for Windows (for Linux host)" OFF)
+
 # Specify toolchain path. I'll pass CMAKE_<BUILD_TOOL_NAME> to Zest.
 # Will not affect ZynAddSubFX (it uses dedicated -DCMAKE_TOOLCHAIN_FILE)
 # To explicitly specify toolchain for CMake projects, this line must satisfy:
 # - Resides in the head of CMakeLists.txt
 # - Use type FILEPATH rather than STRING
-set (CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/z/mingw64-build.cmake" CACHE FILEPATH "" FORCE)
+if (WIN32)
+    set (CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/z/mingw64-build.cmake" CACHE FILEPATH "" FORCE)
+elseif (CROSS_WINDOWS AND NOT WIN32)
+    set (CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/z/windows-build.cmake" CACHE FILEPATH "" FORCE)
+endif ()
 
 
 project(zyn-fusion
@@ -47,12 +53,19 @@ set (ZYNADDSUBFX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/zynaddsubfx-build")
 set (ZYNADDSUBFX_PATH ${DEPS_PATH}/zynaddsubfx)
 set (ZEST_PATH ${DEPS_PATH}/zest)
 
-set (CMAKE_ARGS_DEPS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DINSTALL_LIB_DIR=${DEPS_PREFIX_PATH}/lib -DINSTALL_INC_DIR=${DEPS_PREFIX_PATH}/include -DINSTALL_BIN_DIR=${DEPS_PREFIX_PATH}/bin -DINSTALL_MAN_DIR=${DEPS_PREFIX_PATH}/share/man -DINSTALL_PKGCONFIG_DIR=${DEPS_PREFIX_PATH}/share/pkgconfig)
+set (ZLIB_CMAKE_ARGS_DEPS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DINSTALL_LIB_DIR=${DEPS_PREFIX_PATH}/lib -DINSTALL_INC_DIR=${DEPS_PREFIX_PATH}/include -DINSTALL_BIN_DIR=${DEPS_PREFIX_PATH}/bin -DINSTALL_MAN_DIR=${DEPS_PREFIX_PATH}/share/man -DINSTALL_PKGCONFIG_DIR=${DEPS_PREFIX_PATH}/share/pkgconfig)
 
 
 #
 # Build dependencies
 #
+
+# Some dependencies won't be built on Linux, as we can use system-provided ones
+if (WIN32 OR CROSS_WINDOWS)
+    set (EXCLUDE_OR_NOT OFF)
+else ()
+    set (EXCLUDE_OR_NOT ON)
+endif ()
 
 # Build FFTW3
 ExternalProject_Add (
@@ -67,6 +80,8 @@ ExternalProject_Add (
     CONFIGURE_COMMAND ${DEPS_PATH}/fftw3/configure --build=x86_64-w64-mingw32 --prefix=${DEPS_PREFIX_PATH} --with-our-malloc --disable-mpi
     BUILD_COMMAND make ${MAKE_MULTIJOB}
     INSTALL_COMMAND make ${MAKE_MULTIJOB} install
+
+    EXCLUDE_FROM_ALL ${EXCLUDE_OR_NOT}
 )
 
 # Build liblo
@@ -84,6 +99,8 @@ ExternalProject_Add (
     CONFIGURE_COMMAND ${DEPS_PATH}/liblo/autogen.sh --build=x86_64-w64-mingw32 --prefix=${DEPS_PREFIX_PATH} --disable-shared --enable-static --disable-tests --disable-network-tests --disable-examples
     BUILD_COMMAND make ${MAKE_MULTIJOB}
     INSTALL_COMMAND make ${MAKE_MULTIJOB} install
+
+    EXCLUDE_FROM_ALL ${EXCLUDE_OR_NOT}
 )
 
 # Build mxml
@@ -101,6 +118,8 @@ ExternalProject_Add (
     CONFIGURE_COMMAND ${DEPS_PATH}/mxml/configure --build=x86_64-w64-mingw32 --prefix=${DEPS_PREFIX_PATH} --disable-shared --enable-static
     BUILD_COMMAND make ${MAKE_MULTIJOB} libmxml.a
     INSTALL_COMMAND make ${MAKE_MULTIJOB} -i install
+
+    EXCLUDE_FROM_ALL ${EXCLUDE_OR_NOT}
 )
 
 # Build PortAudio
@@ -118,7 +137,9 @@ ExternalProject_Add (
     # Note for configurations:
     # - Consider static library first
     # - Disable WDM Kernel Streaming (already deprecated by Microsoft, will cause error)
-    CMAKE_ARGS -DPA_BUILD_SHARED=1 -DPA_BUILD_STATIC=1 -DPA_USE_WDMKS=0 ${CMAKE_ARGS_DEPS}
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DPA_BUILD_SHARED=1 -DPA_BUILD_STATIC=1 -DPA_USE_WDMKS=0
+
+    EXCLUDE_FROM_ALL ${EXCLUDE_OR_NOT}
 )
 
 # Build zlib
@@ -133,8 +154,10 @@ ExternalProject_Add (
     UPDATE_DISCONNECTED true  # need this to avoid constant rebuild
 
     # Must override install pathes. They won't be configured by ExternalProject.
-    CMAKE_ARGS ${CMAKE_ARGS_DEPS}
+    CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} ${ZLIB_CMAKE_ARGS_DEPS}
     BUILD_COMMAND make ${MAKE_MULTIJOB}
+
+    EXCLUDE_FROM_ALL ${EXCLUDE_OR_NOT}
 )
 
 
@@ -143,9 +166,14 @@ ExternalProject_Add (
 #
 
 # Build ZynAddSubFX
+
+if (WIN32 OR CROSS_WINDOWS)
+    set (ZYNADDSUBFX_DEPENDS fftw3 zlib mxml portaudio liblo)
+endif ()
+
 ExternalProject_Add (
     zynaddsubfx
-    DEPENDS fftw3 zlib mxml portaudio liblo
+    DEPENDS ${ZYNADDSUBFX_DEPENDS}
     DOWNLOAD_DIR ${DOWNLOAD_PATH}
     SOURCE_DIR ${ZYNADDSUBFX_PATH}
     BINARY_DIR ${ZYNADDSUBFX_BUILD_DIR}
@@ -155,7 +183,7 @@ ExternalProject_Add (
 
     # Some arguments are not cross-platform
     # - Msys2 only: OssEnable, DefaultOutput
-    CMAKE_ARGS -DPREFIX_PATH=${DEPS_PREFIX_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PREFIX_PATH} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_SOURCE_DIR}/z/mingw64-build.cmake ${CMAKE_ARGS_DEPS} -DOssEnable=False -DGuiModule=zest -DDefaultOutput=pa -DDemoMode=${DEMO_MODE} 
+    CMAKE_ARGS -DPREFIX_PATH=${DEPS_PREFIX_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PREFIX_PATH} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DOssEnable=False -DGuiModule=zest -DDefaultOutput=pa -DDemoMode=${DEMO_MODE} 
     BUILD_COMMAND make -j2
     INSTALL_COMMAND ""      # No need to install. We'll copy files manually.
 )
@@ -187,15 +215,17 @@ ExternalProject_Add_Step (
     ALWAYS ON
 )
 
-ExternalProject_Add_Step (
-    zest
-    mruby_superhack_patch
-    DEPENDERS build
-    COMMAND git checkout -- src/backtrace.c
-    COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-string-backtraces.patch
-    WORKING_DIRECTORY ${ZEST_PATH}/mruby
-    ALWAYS ON
-)
+if (WIN32 OR CROSS_WINDOWS)
+    ExternalProject_Add_Step (
+        zest
+        mruby_superhack_patch
+        DEPENDERS build
+        COMMAND git checkout -- src/backtrace.c
+        COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-string-backtraces.patch
+        WORKING_DIRECTORY ${ZEST_PATH}/mruby
+        ALWAYS ON
+    )
+endif ()
 
 ExternalProject_Add_Step (
     zest
@@ -246,17 +276,23 @@ install (
 )
 
 # External dependencies
-find_file (
-    PTHREAD_LIBRARY
-    NAMES libwinpthread-1.dll libwinpthread.dll
-    HINTS $ENV{PATH}
-)
-install (
-    FILES 
-    ${DEPS_PREFIX_PATH}/bin/libportaudio.dll
-    ${PTHREAD_LIBRARY}
-    DESTINATION ${ZYN_FUSION_OUT}
-)
+if (WIN32 OR CROSS_WINDOWS)
+    if (CROSS_WINDOWS)
+        set (MINGW64_LINUX_LIB_PATH /usr/x86_64-w64-mingw32/lib/ /usr/x86_64-w64-mingw32/bin/)
+    endif ()
+
+    find_file (
+        PTHREAD_LIBRARY
+        NAMES libwinpthread-1.dll libwinpthread.dll
+        HINTS $ENV{PATH} ${MINGW64_LINUX_LIB_PATH}
+    )
+    install (
+        FILES
+        ${DEPS_PREFIX_PATH}/bin/libportaudio.dll
+        ${PTHREAD_LIBRARY}
+        DESTINATION ${ZYN_FUSION_OUT}
+    )
+endif ()
 
 # Presets
 install (
