@@ -146,6 +146,7 @@ ExternalProject_Add (
     # - Consider static library first
     # - Disable WDM Kernel Streaming (already deprecated by Microsoft, will cause error)
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DPA_BUILD_SHARED=1 -DPA_BUILD_STATIC=1 -DPA_USE_WDMKS=0
+    BUILD_COMMAND make ${MAKE_MULTIJOB}
 
     EXCLUDE_FROM_ALL ${EXCLUDE_OR_NOT}
 )
