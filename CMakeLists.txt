@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 include(ExternalProject)
 
+# Determine processor count
+include(ProcessorCount)
+ProcessorCount(Ncpu)
+
 option (CROSS_WINDOWS "Enable cross-build for Windows (for Linux host)" OFF)
 
 # Specify toolchain path. I'll pass CMAKE_<BUILD_TOOL_NAME> to Zest.
