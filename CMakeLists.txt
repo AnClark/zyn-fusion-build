@@ -217,6 +217,14 @@ ExternalProject_Add (
 )
 
 # Build Zest
+
+if (UNIX AND NOT APPLE)
+    set (ZEST_MAKE_TARGET linux)
+elseif (WIN32 OR CROSS_WINDOWS)
+    set (ZEST_MAKE_TARGET windows)
+    set (ZEST_COMPILER_FLAGS CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER})
+endif ()
+
 ExternalProject_Add (
     zest
     DOWNLOAD_DIR ${DOWNLOAD_PATH}
@@ -228,7 +236,7 @@ ExternalProject_Add (
     BUILD_IN_SOURCE ON
     CONFIGURE_HANDLED_BY_BUILD ON
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND make CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} VERSION=${PACKAGE_VERSION} BUILD_MODE=${BUILD_MODE} windows
+    BUILD_COMMAND make ${ZEST_COMPILER_FLAGS} VERSION=${PACKAGE_VERSION} BUILD_MODE=${BUILD_MODE} ${ZEST_MAKE_TARGET}
     #BUILD_COMMAND make help
     INSTALL_COMMAND ""      # No need to install. We'll copy files manually.
 )
@@ -252,6 +260,16 @@ if (WIN32 OR CROSS_WINDOWS)
         DEPENDEES download
         COMMAND git checkout -- src/backtrace.c
         COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-string-backtraces.patch
+        WORKING_DIRECTORY ${ZEST_PATH}/mruby
+        ALWAYS ON
+    )
+else ()
+    ExternalProject_Add_Step (
+        zest
+        mruby_superhack_patch_revoke
+        DEPENDERS build
+        DEPENDEES download
+        COMMAND git checkout -- src/backtrace.c
         WORKING_DIRECTORY ${ZEST_PATH}/mruby
         ALWAYS ON
     )
@@ -281,6 +299,26 @@ if (PARALLEL_BUILD_ZEST)
         ALWAYS ON
     )
 endif ()
+
+if (UNIX AND NOT APPLE)
+    ExternalProject_Add_Step (
+        zest
+        zest_make_pack
+        DEPENDEES build
+        COMMAND make pack
+        WORKING_DIRECTORY ${ZEST_PATH}
+        ALWAYS ON
+    )
+    ExternalProject_Add_Step (
+        zest
+        zest_remove_package_qml_files
+        DEPENDEES zest_make_pack
+        COMMAND rm -f package/qml/*.qml
+        WORKING_DIRECTORY ${ZEST_PATH}
+        ALWAYS ON
+    )
+endif ()
+
 
 #
 # Install files
