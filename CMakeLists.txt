@@ -70,8 +70,8 @@ set (DOWNLOAD_PATH "${CMAKE_SOURCE_DIR}/download")
 set (PATCH_PATH "${CMAKE_SOURCE_DIR}/patch")
 
 set (ZYNADDSUBFX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/zynaddsubfx-build")
-set (ZYNADDSUBFX_PATH ${DEPS_PATH}/zynaddsubfx)
-set (ZEST_PATH ${DEPS_PATH}/zest)
+set (ZYNADDSUBFX_PATH ${DEPS_PATH}/zynaddsubfx-${CMAKE_SYSTEM})
+set (ZEST_PATH ${DEPS_PATH}/zest-${CMAKE_SYSTEM})
 
 
 #
