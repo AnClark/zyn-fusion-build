@@ -63,7 +63,7 @@ else ()
 endif ()
 
 
-set (ZYN_FUSION_OUT "${CMAKE_CURRENT_BINARY_DIR}/zyn-fusion")
+set (ZYN_FUSION_OUT "${CMAKE_CURRENT_BINARY_DIR}/zyn-fusion-${CMAKE_SYSTEM}")
 set (DEPS_PATH "${CMAKE_SOURCE_DIR}/deps")
 set (DEPS_PREFIX_PATH "${CMAKE_CURRENT_BINARY_DIR}/usr/")
 set (DOWNLOAD_PATH "${CMAKE_SOURCE_DIR}/download")
