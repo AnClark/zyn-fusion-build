@@ -325,19 +325,25 @@ endif ()
 #
 
 # Zyn-Fusion binaries
+if (WIN32 OR CROSS_WINDOWS)
+    set (ZYNADDSUBFX_VST_PATH ${ZYNADDSUBFX_BUILD_DIR}/src/Plugin/ZynAddSubFX/ZynAddSubFX${CMAKE_SHARED_LIBRARY_SUFFIX})
+else ()
+    set (ZYNADDSUBFX_VST_PATH ${ZYNADDSUBFX_BUILD_DIR}/src/Plugin/ZynAddSubFX/vst/ZynAddSubFX${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif ()
+
 install (
-    PROGRAMS ${ZEST_PATH}/zest.exe
-    RENAME zyn-fusion.exe
+    PROGRAMS ${ZEST_PATH}/zest${CMAKE_EXECUTABLE_SUFFIX}
+    RENAME zyn-fusion${CMAKE_EXECUTABLE_SUFFIX}
     DESTINATION ${ZYN_FUSION_OUT}
 )
 install (
-    PROGRAMS ${ZYNADDSUBFX_BUILD_DIR}/src/zynaddsubfx.exe
+    PROGRAMS ${ZYNADDSUBFX_BUILD_DIR}/src/zynaddsubfx${CMAKE_EXECUTABLE_SUFFIX}
     DESTINATION ${ZYN_FUSION_OUT}
 )
 install (
-    FILES 
-    ${ZEST_PATH}/libzest.dll
-    ${ZYNADDSUBFX_BUILD_DIR}/src/Plugin/ZynAddSubFX/ZynAddSubFX.dll
+    FILES
+    ${ZEST_PATH}/libzest${CMAKE_SHARED_LIBRARY_SUFFIX}
+    ${ZYNADDSUBFX_VST_PATH}
     DESTINATION ${ZYN_FUSION_OUT}
 )
 
