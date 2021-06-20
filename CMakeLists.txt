@@ -196,6 +196,7 @@ ExternalProject_Add (
 
 if (WIN32 OR CROSS_WINDOWS)
     set (ZYNADDSUBFX_DEPENDS fftw3 zlib mxml portaudio liblo)
+    set (ZYNADDSUBFX_WIN_CMAKE_ARGS -DPREFIX_PATH=${DEPS_PREFIX_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PREFIX_PATH} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DOssEnable=False -DDefaultOutput=pa)
 endif ()
 
 ExternalProject_Add (
@@ -210,7 +211,7 @@ ExternalProject_Add (
 
     # Some arguments are not cross-platform
     # - Msys2 only: OssEnable, DefaultOutput
-    CMAKE_ARGS -DPREFIX_PATH=${DEPS_PREFIX_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PREFIX_PATH} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DOssEnable=False -DGuiModule=zest -DDefaultOutput=pa -DDemoMode=${DEMO_MODE} 
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DDemoMode=${DEMO_MODE} -DGuiModule=zest ${ZYNADDSUBFX_WIN_CMAKE_ARGS}
     BUILD_COMMAND make ${MAKE_MULTIJOB_ZYNADDSUBFX}
     INSTALL_COMMAND ""      # No need to install. We'll copy files manually.
 )
