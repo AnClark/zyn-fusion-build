@@ -347,6 +347,31 @@ install (
     DESTINATION ${ZYN_FUSION_OUT}
 )
 
+# LV2 (Linux only)
+if (UNIX AND NOT APPLE)
+    # Pre-install target files in order to generate presets
+    ExternalProject_Add_Step (
+        zynaddsubfx
+        preinstall_zynaddsubfx
+        DEPENDEES build
+        COMMAND make install
+        WORKING_DIRECTORY ${ZYNADDSUBFX_BUILD_DIR}
+        ALWAYS ON
+    )
+
+    # Install preset files
+    install (
+        DIRECTORY ${DEPS_PREFIX_PATH}/lib/lv2/ZynAddSubFX.lv2presets
+        DESTINATION ${ZYN_FUSION_OUT}
+    )
+
+    # Install LV2 core
+    install (
+        DIRECTORY ${ZYNADDSUBFX_BUILD_DIR}/src/Plugin/ZynAddSubFX/lv2
+        DESTINATION ${ZYN_FUSION_OUT}/ZynAddSubFX.lv2
+    )
+endif ()
+
 # Fonts
 install (
     FILES
@@ -391,3 +416,21 @@ install (
 # Zest MainWindow entrance. Actually it's an empty file.
 file(MAKE_DIRECTORY ${ZYN_FUSION_OUT}/qml)
 file(TOUCH ${ZYN_FUSION_OUT}/qml/MainWindow.qml)
+
+# Package-related extra files (Linux only)
+if (UNIX AND NOT APPLE)
+    install (
+        PROGRAMS ${ZEST_PATH}/install-linux.sh
+        DESTINATION ${ZYN_FUSION_OUT}
+    )
+    install (
+        FILES ${ZEST_PATH}/package-README.txt
+        RENAME README.txt
+        DESTINATION ${ZYN_FUSION_OUT}
+    )
+    install (
+        FILES ${ZYNADDSUBFX_PATH}/COPYING
+        RENAME COPYING.zynaddsubfx
+        DESTINATION ${ZYN_FUSION_OUT}
+    )
+endif ()
