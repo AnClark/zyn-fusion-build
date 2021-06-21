@@ -70,7 +70,7 @@ build_zynaddsubfx:
 	mkdir -p $(ZYNADDSUBFX_BUILD_DIR)
 
 	env \
-	PATH=$(PREFIX_PATH):$(PATH) \
+	PATH="$(PREFIX_PATH):$(PATH)" \
 	VERSION=$(VER) \
 	BUILD_MODE=$(MODE) \
 	cmake -S $(ZYNADDSUBFX_PATH) -B $(ZYNADDSUBFX_BUILD_DIR) \
