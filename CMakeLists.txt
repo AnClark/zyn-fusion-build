@@ -261,7 +261,7 @@ if (WIN32 OR CROSS_WINDOWS)
         COMMAND git checkout -- src/backtrace.c
         COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-string-backtraces.patch
         WORKING_DIRECTORY ${ZEST_PATH}/mruby
-        ALWAYS ON
+        ALWAYS OFF
     )
 else ()
     ExternalProject_Add_Step (
@@ -271,7 +271,7 @@ else ()
         DEPENDEES download
         COMMAND git checkout -- src/backtrace.c
         WORKING_DIRECTORY ${ZEST_PATH}/mruby
-        ALWAYS ON
+        ALWAYS OFF
     )
 endif ()
 
@@ -283,7 +283,7 @@ ExternalProject_Add_Step (
     COMMAND git checkout -- build_config.rb
     COMMAND patch -N -p1 -i ${PATCH_PATH}/zest-bypass-host-debug.patch
     WORKING_DIRECTORY ${ZEST_PATH}
-    ALWAYS ON
+    ALWAYS OFF
 )
 
 if (PARALLEL_BUILD_ZEST)
@@ -296,7 +296,7 @@ if (PARALLEL_BUILD_ZEST)
         COMMAND sed s/rake/rake\ \-j${Ncpu}/ -i Makefile
         COMMAND sed s/make/make\ \-j${Ncpu}/ -i Makefile
         WORKING_DIRECTORY ${ZEST_PATH}
-        ALWAYS ON
+        ALWAYS OFF
     )
 endif ()
 
