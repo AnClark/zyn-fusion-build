@@ -214,6 +214,7 @@ ExternalProject_Add (
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${DEPS_PREFIX_PATH} -DDemoMode=${DEMO_MODE} -DGuiModule=zest ${ZYNADDSUBFX_WIN_CMAKE_ARGS}
     BUILD_COMMAND make ${MAKE_MULTIJOB_ZYNADDSUBFX}
     INSTALL_COMMAND ""      # No need to install. We'll copy files manually.
+    BUILD_ALWAYS ON         # Always rebuild so that source updates/changes won't be ignored
 )
 
 # Build Zest
